@@ -1,112 +1,178 @@
 /**
- * Created by christopherhuang on 8/23/15.
+ * Created by christopherhuang on 8/25/15.
  */
-function Snake(board) {
-    this.height = 10;
-    this.width = 10;
-    this.color = 'red';
-    this.board = board;
-    this.body = [];
+/**
+ * Game class used to control the game loop
+ * @constructor
+ */
+function Game() {
+}
 
-    this.addEventListener();
+/**
+ * Game entrance
+ */
+Game.prototype.gameLoop = function() {
     this.init();
+    if (id) window.clearInterval(id);
+    id = window.setInterval(this.draw, 60);
 }
 
-Snake.prototype.init = function() {
-    this.body = [];
-    this.body.push({x : 0, y : 0});
-    this.direction = 'Right';
-    this.speed = 1;
+/**
+ * Initialize the game settings
+ */
+Game.prototype.init = function() {
+    snake = new Snake(10, 10, 'black', 'right', 10);
+    board = new Board(canvas.height, canvas.width, 'blue');
+    foodFactory = new FoodFactory(board, 10, 10, 'yellow');
+    food = foodFactory.generateFood();
+
 }
 
-Snake.prototype.draw = function(canvas) {
+/**
+ * draw the objects in the board
+ * @param snake
+ * @param board
+ * @param food
+ */
+Game.prototype.draw = function() {
+    snake.move();
     var context = canvas.getContext('2d');
-    context.fillStyle = this.board.backgroundColor;
-    context.fillRect(0, 0, this.board.height, this.board.width);
-    context.fillStyle = this.color;
-    this.body.forEach(function(cell) {
-        context.fillRect(cell.x, cell.y, this.height, this.width);
-    }, this);
+    context.fillStyle = board.color;
+    context.fillRect(0, 0, board.height, board.width);
+    context.fillStyle = snake.color;
+    snake.body.forEach(function(cell) {
+        context.fillRect(cell.x, cell.y, snake.height, snake.width);
+    });
+    context.fillStyle = food.color;
+    context.fillRect(food.position.x, food.position.y, food.height, food.width);
 }
 
-Snake.prototype.move = function() {
-    var head = {x : this.body[0].x,
-                y : this.body[0].y};
-
-    switch (this.direction) {
-        case 'Right':
-            head.x += this.speed;
-            break;
-        case 'Left':
-            head.x -= this.speed;
-            break;
-        case 'Up':
-            head.y -= this.speed;
-            break;
-        case 'Down':
-            head.y += this.speed;
-            break;
-    }
-    if (this.hasCollision(head)) {
-        return this.init();
-    }
-    this.body.unshift(head);
-    this.body.pop();
-}
-
-Snake.prototype.addEventListener = function() {
-    var snake = this;
+/**
+ *
+ */
+Game.prototype.addEventListener = function () {
     document.addEventListener('keydown', function(e) {
-        switch (e.keyCode) {
-            case 37:
-                //Left
-                if (snake.direction != 'Right') {
-                    snake.direction = 'Left';
-                }
-                break;
-            case 39:
-                //Right
-                if (snake.direction != 'Left') {
-                    snake.direction = 'Right';
-                }
-                break;
-            case 38:
-                //Up
-                if (snake.direction != 'Down') {
-                    snake.direction = 'Up';
-                }
-                break;
-            case 40:
-                //Down
-                if (snake.direction != 'Up') {
-                    snake.direction = 'Down';
-                }
-                break;
+        if (e.keyCode == 37 && snake.direction != 'right') {
+            snake.direction = 'left';
+        }else if (e.keyCode == 38 && snake.direction != 'down') {
+            snake.direction = 'up';
+        }else if (e.keyCode == 39 && snake.direction != 'left') {
+            snake.direction = 'right';
+        }else if (e.keyCode == 40 && snake.direction != 'up') {
+            snake.direction = 'down';
         }
     });
 }
 
-Snake.prototype.hasCollision = function(head) {
-    if (head.x < 0 || head.x + this.width >= this.board.width ||
-        head.y < 0 || head.y + this.height >= this.board.height) {
+/**
+ * Snake class
+ * @param height
+ * @param width
+ * @param color
+ * @param direction
+ * @param speed
+ * @constructor
+ */
+function Snake(height, width, color, direction, speed) {
+    this.height = height;
+    this.width = width;
+    this.color = color;
+    this.direction = direction;
+    this.speed = speed;
+    this.body = [{x : 0, y : 0}];
+}
+
+/**
+ * Update the position of the snake
+ */
+Snake.prototype.move = function() {
+    var cell = {x : this.body[0].x, y : this.body[0].y};
+    if (this.direction == 'right') {
+        cell.x += this.speed;
+    }else if (this.direction == 'left') {
+        cell.x -= this.speed;
+    }else if (this.direction == 'up') {
+        cell.y -= this.speed;
+    }else if (this.direction == 'down') {
+        cell.y += this.speed;
+    }
+    snake.body.unshift(cell);
+    var tail = snake.body.pop();
+    if (this.hasCollision()) {
+        return game.gameLoop();
+    }
+    if (food.hasCollision(snake)) {
+        snake.body.push(tail);
+        food = foodFactory.generateFood();
+    }
+}
+
+Snake.prototype.hasCollision = function() {
+    var head = this.body[0];
+
+    for (var i = 1; i < this.body.length; i++) {
+        if (head.x == this.body[i].x && head.y == this.body[i].y) return true;
+    }
+    if (head.x < 0 || head.x + this.width > board.width
+        || head.y < 0 || head.y + this.height > board.height) {
         return true;
     }
     return false;
 }
 
-Snake.prototype.generateFood = function() {
-
+/**
+ * Board class
+ * @param height
+ * @param width
+ * @param color
+ * @constructor
+ */
+function Board(height, width, color) {
+    this.height = height;
+    this.width = width;
+    this.color = color;
 }
 
-function Board(canvas) {
-    this.height = canvas.height;
-    this.width = canvas.width;
-    this.backgroundColor = 'white';
+/**
+ * Generate the food on the board
+ * @param board
+ * @constructor
+ */
+function FoodFactory(board, height, width, color) {
+    this.board = board;
+    this.height = height;
+    this.width = width;
+    this.color = color;
 }
+
+FoodFactory.prototype.generateFood = function() {
+    var x = this.height * Math.floor(Math.random() * Math.floor(this.board.height / this.height));
+    var y = this.width * Math.floor(Math.random() * Math.floor(this.board.width / this.width));
+    return new Food(this.height, this.width, this.color, {x : x, y : y});
+}
+
+function Food(height, width, color, position) {
+    this.height = height;
+    this.width = width;
+    this.color = color;
+    this.position = position;
+}
+
+Food.prototype.hasCollision = function(snake) {
+    if (this.position.x == snake.body[0].x
+        && this.position.y == snake.body[0].y) {
+        return true;
+    }
+    return false;
+}
+
+var snake;
+var board;
+var foodFactory;
+var food;
+var id;
 
 var canvas = document.getElementById('canvas');
-var snake = new Snake(new Board(canvas));
-window.setInterval(function() {
-    snake.move();
-    snake.draw(canvas);
-}, 20);
+var game = new Game();
+game.addEventListener();
+game.gameLoop();
